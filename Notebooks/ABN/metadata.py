@@ -28,10 +28,10 @@ data_type = {
     'CLIENTGROUP': 'category',        # Group to which client belongs, 48 unique groups
     'ACCOUNTMODEL': 'category',       # Client account model, acceptable categories {LP, HW, MP, HP}, [Why missingness?]
     'AGE_CLASS': 'category',          # Client age groups,  [Why missingness?], unknown
-                                      # [12, 17], [18, 23], [24-29], [30-34], [35-40], [41-54], [55-64], [65-74], [75+]
-    'HOMEBANK_COLOUR': 'category',     # Client home bank colour, 'Geel', 'Groen', 'Oranje', 'Rood', missing value exist. [Why missingness?]
+                                      # [12, 17], [18, 23], [24-29], [30-34], [35-40], [41-54], [55-64], [65-74], [75+], [Leeftijd_onbekend]
+    'HOMEBANK_COLOUR': 'category',    # Client home bank colour, 'Geel', 'Groen', 'Oranje', 'Rood', missing value exist. [Why missingness?]
     'LOYALITY': 'category',           # Client loyalty colour, 'Oranje', 'Groen', 'Rood', 'Wit', [Why missingness?]
-    'TARGET': 'category',             # Client Target, constant category 99
-    'Record_Count': 'category',       # Number of records available per client, constant 24
+    'TARGET': 'int8',                 # Client Target, constant category 99
+    'Record_Count': 'int8',           # Number of records available per client, constant 24
     'CUSTOMER_ID': 'category',        # Client ID 
 }

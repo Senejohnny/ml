@@ -19,6 +19,10 @@ def logging(func):
     return wrapper
 
 @logging
+def data_loader(path:str, **kwargs):
+    return pd.read_csv(path, sep=';', **kwargs)
+
+@logging
 def set_data_types(df:pd.DataFrame, data_type:dict) -> pd.DataFrame:
     """ Setting data types to a  """
     for col in data_type.keys():
@@ -33,31 +37,67 @@ def set_data_types(df:pd.DataFrame, data_type:dict) -> pd.DataFrame:
             raise
     return df
 
+@logging
+def one_hot_encoder(df:pd.DataFrame, col, *cats):
+    """
+    Convert categorical variable into dummy variables and keeps the given categorical columns. 
+    Under the hood uses pandas get_dummies method
+
+    Parameters:
+    -----------
+    col: The specific column to be one hot encoded
+    
+    cats: the categories/columns that will be kept after one hot encoding.
+
+    Example:
+    --------
+    >> s = pd.Series(list('abca'))
+    >> pd.get_dummies(s)
+       a  b  c
+    0  1  0  0
+    1  0  1  0
+    2  0  0  1
+    3  1  0  0
+    """
+    
+    encoded_df = pd.get_dummies(df[col])    
+    df.drop(col, axis=1, inplace=True)
+    if not cats:
+        return pd.concat([df, encoded_df], axis=1)
+    cats = list(cats)    
+    return pd.concat([df, encoded_df[cats]], axis=1)
+
+@logging
+def integer_encoder(df:pd.DataFrame, *cols):
+    """
+    Encode the object as an enumerated type, i.e. Integer Encoding. This function is particularly 
+    used for features with 2 category. Under the hood uses pandas factorize method. For Features 
+    with more categories consider one_hot_encoder.
+
+    Parameters:
+    -----------
+    cols: Name of the column/feature in the dataset
+    
+    Example:
+    --------
+    >> pd.factorize(['b', 'b', 'a', 'c', 'b'])
+    (
+        array([0, 0, 1, 2, 0]...),
+        array(['b', 'a', 'c'], dtype=object)
+    )
+    """
+
+    if not cols:
+        raise ValueError('Name of the dataset column is missing')
+
+    for col in cols:
+        if df[col].dtype not in ['object', 'category']:
+            raise TypeError(f'{col} dtype not suitable for encoding')
+        df[col], _ = pd.factorize(df[col])
+    return df
+
 
 def sklearn_adapter(df:pd.DataFrame, label:str):
     """ Splits the data frame to input matrix and output vector suitable for sklearn package adapter """
     _df = df.copy(deep=True)
     return (_df.drop(label, axis=1), _df.pop(label))
-
-
-
-def plot_correlations(df, verbose=True, **kwargs):
-    """ If verbose variables with correlation above 0.6 are printed """
-    
-    # Correlation matrix for numerical variables
-    corr_mat = df.corr()
-    plt.figure(figsize=(10, 6))
-    heatmap(corr_mat, cmap='Blues', annot=True, **kwargs)
-    plt.show()
-
-    if verbose:
-        top_corr = (
-            corr_mat
-            .abs()
-            .where(np.triu(np.ones(corr_mat.shape), k=1).astype(bool))
-            .stack()
-            .sort_values(ascending=False)
-        )
-        print('Top Correlations above 0.6')
-        print(top_corr[top_corr > 0.6])
-
