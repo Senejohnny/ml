@@ -2,6 +2,11 @@
 
 # Churn on which type of product package are we talkng about?
 # I like meta data for a qucik sneak peek at the data & data validation & data missingness
+# It is difficult to say anything definite about the average duration that churners are active customers 
+# without looking at the time since they became customers (before observation started)
+# The number of customers that churned at a given month during observation.
+# Do we have recurrent churn or subscription? If so they should be removed
+
 
 data_type = {
     # 'MONTH_PERIOD': 'str',          # 24 Months record, values months 
@@ -18,7 +23,6 @@ data_type = {
     'PACKAGE_IND': 'int8',            # Client subscripe to cetrain package, 0 & 1
     'CREDIT_CLASS': 'int8',           # Client assigned credit class, values 0 to 8
     'DEBIT_CLASS': 'int8',            # Client assigned debit class, values 0 to 5
-    'BUSINESS_VOLUME_CLASS': 'int8',  # Client business volumne class, values 0 to 9
     'BUSINESS_VOLUME_CLASS': 'int8',  # Client business volumne class, values 0 to 9
     'INVESTED_CAPITAL_CLASS': 'int8', # Client invested capital class, values 0 to 9
     'SAVINGS_CAPITAL_CLASS': 'int8',  # Client invested capital class, values 0 to 10

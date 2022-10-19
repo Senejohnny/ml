@@ -18,9 +18,37 @@ def logging(func):
         return result
     return wrapper
 
+
+
+def date_parser_o(x):
+    refrence_month = pd.to_datetime('2011-1-1').to_period('M')
+    trans_month = pd.to_datetime(x, format='%Y%m').to_period('M')
+    return ( trans_month - refrence_month).n #n captures the month number
+
+def date_parser(date_time:str):
+    return pd.to_datetime(date_time, format='%Y%m')
+
 @logging
-def data_loader(path:str, **kwargs):
+def datetime2int(df:pd.DataFrame, time_col:str) -> pd.DataFrame():
+    """ sorts the values per client id by certain column """
+    date2month_numb = lambda x: (x.to_period('M') - pd.to_datetime('2011-1-1').to_period('M')).n
+    df[time_col] = df[time_col].apply(date2month_numb).astype('float16')
+    return df
+
+
+@logging
+def sort_values_per_client(df:pd.DataFrame, by:str) -> pd.DataFrame():
+    """ sorts the values per client id by certain column """
+
+    for client_id in df.CUSTOMER_ID.unique():
+        ind = df.CUSTOMER_ID.eq(client_id)
+        df[ind] = df[ind].sort_values(by='MONTH_PERIOD', ascending=False)
+    return df
+
+@logging
+def data_loader(path:str, **kwargs,):
     return pd.read_csv(path, sep=';', **kwargs)
+     
 
 @logging
 def set_data_types(df:pd.DataFrame, data_type:dict) -> pd.DataFrame:
@@ -38,7 +66,13 @@ def set_data_types(df:pd.DataFrame, data_type:dict) -> pd.DataFrame:
     return df
 
 @logging
-def one_hot_encoder(df:pd.DataFrame, col, *cats):
+def clean_string_strip(df, *cols):
+    for col in list(cols):
+        df[col] = df[col].apply(str.strip)
+    return df
+
+@logging
+def one_hot_encoder(df:pd.DataFrame, *col, **kwargs):
     """
     Convert categorical variable into dummy variables and keeps the given categorical columns. 
     Under the hood uses pandas get_dummies method
@@ -59,16 +93,13 @@ def one_hot_encoder(df:pd.DataFrame, col, *cats):
     2  0  0  1
     3  1  0  0
     """
-    
-    encoded_df = pd.get_dummies(df[col])    
-    df.drop(col, axis=1, inplace=True)
-    if not cats:
-        return pd.concat([df, encoded_df], axis=1)
-    cats = list(cats)    
-    return pd.concat([df, encoded_df[cats]], axis=1)
+    df_org = df.copy(deep=True)
+    cols = list(col)
+    return pd.get_dummies(df_org, columns=cols, **kwargs) 
+
 
 @logging
-def integer_encoder(df:pd.DataFrame, *cols):
+def integer_encoder(df:pd.DataFrame, *cols) -> pd.DataFrame():
     """
     Encode the object as an enumerated type, i.e. Integer Encoding. This function is particularly 
     used for features with 2 category. Under the hood uses pandas factorize method. For Features 
@@ -93,11 +124,13 @@ def integer_encoder(df:pd.DataFrame, *cols):
     for col in cols:
         if df[col].dtype not in ['object', 'category']:
             raise TypeError(f'{col} dtype not suitable for encoding')
-        df[col], _ = pd.factorize(df[col])
+        df[col], _ = pd.factorize(df[col], use_na_sentinel=False)
     return df
 
+    
 
-def sklearn_adapter(df:pd.DataFrame, label:str):
+
+def sklearn_adapter(df:pd.DataFrame, label:str) -> tuple:
     """ Splits the data frame to input matrix and output vector suitable for sklearn package adapter """
     _df = df.copy(deep=True)
     return (_df.drop(label, axis=1), _df.pop(label))
