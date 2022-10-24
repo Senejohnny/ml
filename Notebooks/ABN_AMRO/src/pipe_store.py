@@ -5,6 +5,7 @@ from datetime import datetime
 from functools import wraps
 from typing import Literal
 import pandas as pd 
+import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
 logger = logging.getLogger()
@@ -20,13 +21,6 @@ def logging(func):
         logger.info(f"Step: {func.__name__} | Shape: {result.shape} | Computation Time: {time_taken}s")
         return result
     return wrapper
-
-
-
-def date_parser_o(x):
-    refrence_month = pd.to_datetime('2011-1-1').to_period('M')
-    trans_month = pd.to_datetime(x, format='%Y%m').to_period('M')
-    return ( trans_month - refrence_month).n #n captures the month number
 
 def date_parser(date_time:str):
     return pd.to_datetime(date_time, format='%Y%m')
@@ -71,10 +65,15 @@ def set_data_types(df:pd.DataFrame, data_type:dict) -> pd.DataFrame:
     return df
 
 @logging
-def clean_string_strip(df, *cols):
+def clean_string_strip(df:pd.DataFrame, *cols):
     for col in list(cols):
         df[col] = df[col].apply(str.strip)
     return df
+
+def combine_churns(df:pd.DataFrame, dtype:str='int8'):
+    return df.assign(
+        COMBINED_CHURN = (df['CHURNED_IND'].astype(bool) + df['COMMERCIALLY_CHURNED'].astype(bool)).astype(dtype)
+    )
 
 # @logging
 def one_hot_encoder(df:pd.DataFrame, *col, **kwargs):
@@ -128,6 +127,25 @@ def label_encoder(df:pd.DataFrame, *cols) -> pd.DataFrame():
         encoder = LabelEncoder()
         df_enc[col] = encoder.fit_transform(df_enc[col])
     return df_enc
+
+@logging
+def feature_scaler(df, *cols, scaler:Literal['Standard', 'MaxMin']):
+    """ 
+    Scaling the given numerical columns. This method can be used for pre analysis but 
+    should not be used in model development. A pipeline would be a better candidate for such purpose
+    """    
+
+    if scaler == 'Standard':
+        for col in list(cols):
+            df[col] = (df[col] - df[col].mean()) / df[col].std()
+    if scaler == 'MaxMin':
+        for col in list(cols):
+            df[col] = (df[col] - df[col].min()) / (df[col].max() - df[col].min())
+    return df
+
+def df_train_test_split(df, test_size:float=0.25):
+    msk = np.random.rand(len(df)) < test_size
+    return (df[~msk], df[msk])
 
 # @logging
 # def integer_encoder(df:pd.DataFrame, *cols) -> pd.DataFrame():
@@ -212,4 +230,10 @@ def summerize_client_behaviour(df, churn_col:Literal['CHURNED_IND', 'COMMERCIALL
         
     print(f'Number of clients that rejoined [churn -> active]: {len(ids_rejoin)}')
     print(f'Number of clients with rechurned [active -> churn -> active]: {len(ids_rechurn)}')
-    return pd.DataFrame(_dics).T.rename_axis('id').reset_index()
+    df_sum = pd.DataFrame(_dics).T.rename_axis('id').reset_index()
+    str_cols = {'AGE_CLASS', 'HOMEBANK_COLOUR', 'LOYALITY', 'CLIENTGROUP', 'ACCOUNTMODEL'}
+    for col in set(df_sum.columns) - {'id', 'churn_event', 'churn_time'} - str_cols:
+        df_sum[col] = df_sum[col].astype('int8')
+    # for col in str_cols:
+    #     df_sum[col] = df_sum[col].astype('category')
+    return df_sum

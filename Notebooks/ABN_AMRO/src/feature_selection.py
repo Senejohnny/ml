@@ -79,3 +79,9 @@ def variable_variances_per_client(df):
         variances[cust_id] = dict(df_id.var(numeric_only=True).round(2))
     return pd.DataFrame(variances).T
 
+
+def select_kbest_features(X, y, **kwargs):
+    from sklearn.feature_selection import SelectKBest, chi2
+    k_best = SelectKBest(chi2,  **kwargs).fit(X, y)
+    selected_cols = list(k_best.get_feature_names_out())
+    return selected_cols
