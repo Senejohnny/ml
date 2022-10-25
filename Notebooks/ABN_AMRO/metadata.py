@@ -1,7 +1,6 @@
 """ This file contains the meta date as to ABN AMRO churn prediction project """
 
-# Churn on which type of product package are we talkng about?
-# I like meta data for a qucik sneak peek at the data & data validation & data missingness
+# Useful for qucik sneak peek at the data & data validation & data missingness
 
 
 data_type = {
