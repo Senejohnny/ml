@@ -68,13 +68,14 @@ def plot_precision_recall_curve(pipeline, X_test, y_test, ax=None):
     clf_probs = clf_probs[:, 1]
     # predict class values
     precision, recall, _ = precision_recall_curve(y_test, clf_probs)
-    # plot the precision-recall curves
-    no_skill = sum(y_test) / len(y_test) # a no skill predicts all to
+    no_skill = sum(y_test) / len(y_test) # No skill predicts all as positive class, precision = (y_test=1)[TP] / (y_test=1)[TP] + (y_test=0)[FP]
     plot_obj.plot([0, 1], [no_skill, no_skill], linestyle='--')
     plot_obj.plot(recall, precision, label=f'PR curve (area = {auc(recall, precision):0.2f})')
     xlabel, ylabel = "Recall", "Precision"
     ax.set_xlabel(xlabel) if ax else plt.xlabel(xlabel)
     ax.set_ylabel(ylabel) if ax else plt.xlabel(ylabel)
+    title = "Precision Recall Curve"
+    ax.set_title(title) if ax else plt.title(title)
     plot_obj.legend()
     # fig.show() if ax else plt.show()
 
@@ -89,3 +90,49 @@ def print_scores(estimator, X_test, y_test):
     print(f'Sensitivity/Recall/TPR := TP/(TP+FN): {recall_score(y_test, y_pred): 0.2}')
     # print(f'Specifcity/TNR := TP/(TP+FP): ?')
 
+
+def print_concordance_index(estimator, X_test, T='churn_time', E='churn_event'):
+    from lifelines.utils import concordance_index
+    c_index = concordance_index(
+        X_test[T], 
+        -estimator.predict_partial_hazard(X_test), 
+        X_test[E]
+    )
+    print(f'C-index for test data is{c_index * 100: .2f}%')
+
+
+def t2e_model_performance(estimator, X_test):
+    import seaborn as sns
+    inds_churn = X_test.churn_event == 1
+    inds_no_churn = X_test.churn_event == 0
+    pred_hazard = estimator.predict_cumulative_hazard(X_test).T
+    fig, ax = plt.subplots(1, 2, figsize=(14,4))
+    sns.histplot(pred_hazard[inds_churn][24.0], stat='percent', ax=ax[0], bins=[0, .1, .2, .3,  2.5])
+    ax[0].set_title(f'#Clients that Chruned {len(pred_hazard[inds_churn])}, Recall=74%, Precision=50%')
+    ax[0].set_xlabel('Max Cumulative Hazard of churn (cut-off = 0.3)')
+    sns.histplot(pred_hazard[inds_no_churn][24.0], stat='percent', ax=ax[1], bins=[0, .1, .2, .3,  2.5])
+    ax[1].set_title(f'#Clients that Not Chruned {len(pred_hazard[inds_no_churn])}')
+    ax[1].set_xlabel('Max Cumulative Hazard of churn (cut-off = 0.3)');
+
+def plot_cumulative_hazard_and_survival(estimator, X_test, cut_off):
+    inds_churn = X_test.churn_event == 1
+    ind_churn_sam = X_test[inds_churn].sample().index
+    inds_no_churn = X_test.churn_event == 0
+    ind_no_churn_sam = X_test[inds_no_churn].sample().index
+    
+    pred_hazard = estimator.predict_cumulative_hazard(X_test).T
+    pred_surv = estimator.predict_survival_function(X_test).T
+    fig, ax = plt.subplots(1,2, figsize=(12,4))
+
+    pred_surv.loc[ind_no_churn_sam, :].T.plot(ax=ax[0])
+    pred_surv.loc[ind_churn_sam, :].T.plot(ax=ax[0])
+    ax[0].legend(['Not Churned client', 'Churned client'])
+    ax[0].set_xlabel('Time(Month)')
+    ax[0].set_ylabel('Probability of Retention');
+
+    pred_hazard.loc[ind_no_churn_sam, :].T.plot(ax=ax[1])
+    pred_hazard.loc[ind_churn_sam, :].T.plot(ax=ax[1])
+    ax[1].legend(['Not Churned client', 'Churned client'])
+    ax[1].plot([0, 25], [cut_off, cut_off], linestyle='--')
+    ax[1].set_xlabel('Time(Month)')
+    ax[1].set_ylabel('Cumulative Hazard of churn');
